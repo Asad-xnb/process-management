@@ -49,11 +49,11 @@ void readFile(const string& filename) {
         cout << "File not found.\n";
         return;
     }
-    cout << "---- Content of '" << filename << "' ----\n";
+    cout << "---- '" << filename << "' ----\n\n";
     string line;
     while (getline(ifs, line))
         cout << line << '\n';
-    cout << "---- End of file ----\n";
+    cout << "\n---- End ----\n";
 }
 
 void deleteFile(const string& filename) {
@@ -243,34 +243,6 @@ void fcfsSimulation() {
     
 }
 
-void fileMenu() {
-    cout << "\n--- File Management Menu ---\n";
-    cout << "Commands: create <filename>\n read <filename>\n delete <filename>\n list\n back\n";
-    string line;
-    while (true) {
-        cout << "file> ";
-        getline(cin, line);
-        auto tokens = split(line);
-        if (tokens.empty()) continue;
-        string cmd = tokens[0];
-
-        if (cmd == "create" && tokens.size() == 2) {
-            createFile(tokens[1]);
-        } else if (cmd == "read" && tokens.size() == 2) {
-            readFile(tokens[1]);
-        } else if (cmd == "delete" && tokens.size() == 2) {
-            deleteFile(tokens[1]);
-        } else if (cmd == "list" && tokens.size() == 1) {
-            listFiles();
-        } else if (cmd == "back") {
-            cout << "Returning to main menu...\n";
-            break;
-        } else {
-            cout << "Invalid file command. Try again.\n";
-        }
-    }
-}
-
 void processMenu() {
     cout << "\n--- Process Management Menu ---\n";
     cout << "Commands: fork\n pid\n ppid\n wait\n ps\n kill <pid>\n dir\n back\n";
@@ -377,12 +349,82 @@ void printWorkingDirectory() {
     cout << endl;
 }
 
+void fMenu() {
+    cout << "\n--- File Management Menu ---\n";
+
+    cout << "\nAvailable Commands:\n";
+    cout << "  create <filename>    - Create File\n";
+    cout << "  read <filename>      - Read File\n";
+    cout << "  delete <filename>    - Delete File\n";
+    cout << "  list                 - List files in the current directory\n";
+    
+    cout << endl;
+    cout << "  cd <path>            - Change current directory\n";
+    cout << "  pwd                  - Print current working directory\n";
+
+    cout << endl;
+    cout << "\n\n";
+    cout << "  help                 - Show this help menu\n";
+    cout << "  clear                - Clear the screen\n";
+    cout << "  back                 - Get back to Main Menu\n";
+    cout << "  exit                 - Exit the shell\n";
+}
+
+void fileMenu() {
+    system("clear");
+    fMenu();
+    string line;
+    while (true) {
+        cout << "file> ";
+        getline(cin, line);
+        auto tokens = split(line);
+        if (tokens.empty()) continue;
+        string cmd = tokens[0];
+
+        if (cmd == "create" && tokens.size() == 2) {
+            createFile(tokens[1]);
+        } else if (cmd == "read" && tokens.size() == 2) {
+            readFile(tokens[1]);
+        } else if (cmd == "delete" && tokens.size() == 2) {
+            deleteFile(tokens[1]);
+        } else if (cmd == "list" && tokens.size() == 1) {
+            system("clear");
+            listFiles();
+        } else if (cmd == "cd" && tokens.size() == 2) {
+            system("clear");
+            changeDirectory(tokens[1]);
+        } else if (cmd == "pwd" && tokens.size() == 1) {
+            system("clear");
+            printWorkingDirectory();
+        } 
+        else if (cmd == "help" && tokens.size() == 1) {
+            system("clear");
+            fMenu();
+        } else if (cmd == "clear" && tokens.size() == 1) {
+            system("clear");
+        }
+        else if (cmd == "back") {
+            system("clear");
+            cout << "Returning to main menu...\n";
+            break;
+        } else if (cmd == "exit") {
+            system("clear");
+            cout << "Exiting ...\n\n";
+            exit(0);
+        }
+        else {
+            cout << "Invalid directory command. Try again.\n";
+        }
+    }
+}
+
+
 void dMenu() {
     cout << "\n--- Directory Management Menu ---\n";
     cout << "\nAvailable Commands:\n";
-    cout << "  make <directory>     - Enter file management menu\n";
-    cout << "  cd <path>            - Enter process management menu\n";
-    cout << "  remove <directory>    - Directory Related Commands\n";
+    cout << "  make <directory>     - make directory\n";
+    cout << "  cd <path>            - change directory\n";
+    cout << "  remove <directory>   - remove directory\n";
     cout << "  ls                   - List files in the current directory\n";
     cout << "  pwd                  - Print current working directory\n";
     
@@ -471,10 +513,12 @@ int main() {
         } else if (cmd == "dir") {
             directoryMenu();
         } else if (cmd == "help") {
+            system("clear");
             helpMenu();
         } else if (cmd == "clear") {
             system("clear");
         } else if (cmd == "exit") {
+            system("clear");
             cout << "Exiting shell. Goodbye!\n";
             break;
         } else {
