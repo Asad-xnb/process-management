@@ -123,7 +123,7 @@ void forkProcess(const string& programPath) {
             nullptr
         };
 
-        execvp("xterm", (char* const*)cmd);  // Use "xterm" here
+        execvp("xterm", (char* const*)cmd); 
         perror("execvp failed");
         exit(1);
     } else {
