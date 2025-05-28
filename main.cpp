@@ -14,6 +14,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <algorithm>
+#include <iostream>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 using namespace std;
 
@@ -67,7 +71,7 @@ void listFiles() {
         cout << "Directory '" << CURRENT_DIR << "' does not exist or cannot be opened.\n";
         return;
     }
-    cout << "Files in '" << CURRENT_DIR << "':\n";
+    cout << "Files in '" << CURRENT_DIR << "/" <<"':\n";
     struct dirent* entry;
     while ((entry = readdir(dir)) != nullptr) {
         string name = entry->d_name;
@@ -176,8 +180,6 @@ void listDirContents() {
     }
     closedir(dir);
 }
-
-// ------------------- FCFS Scheduling Simulation -------------------
 
 struct Process {
     int pid;
@@ -336,30 +338,64 @@ void changeDirectory(const string& path) {
 
 void removeDirectory(const string& dirname) {
     string path = CURRENT_DIR + "/" + dirname;
-    if (rmdir(path.c_str()) == 0) {
-        cout << "Directory '" << dirname << "' removed successfully.\n";
-    } else {
-        perror("rmdir failed");
+
+    try {
+        if (!fs::exists(path)) {
+            cout << "Directory '" << dirname << "' does not exist.\n";
+            return;
+        }
+
+        if (!fs::is_directory(path)) {
+            cout << "'" << dirname << "' is not a directory.\n";
+            return;
+        }
+
+        if (fs::is_empty(path)) {
+            fs::remove(path);
+            cout << "Directory '" << dirname << "' removed successfully.\n";
+        } else {
+            cout << "Directory '" << dirname << "' is not empty. Do you want to delete it and all its contents? (y/n): ";
+            char choice;
+            cin >> choice;
+            cin.ignore();
+
+            if (tolower(choice) == 'y') {
+                fs::remove_all(path);
+                cout << "Directory '" << dirname << "' and all its contents removed successfully.\n";
+            } else {
+                cout << "Operation cancelled. Directory not removed.\n";
+            }
+        }
+    } catch (const fs::filesystem_error& e) {
+        cerr << "Error: " << e.what() << "\n";
     }
 }
 
 void printWorkingDirectory() {
-    cout << "Current directory: " << system("pwd") << "\n\n";
+    cout << "Current working directory: \n";
+    system("pwd");
+    cout << endl;
 }
 
-void directoryMenu() {
+void dMenu() {
     cout << "\n--- Directory Management Menu ---\n";
     cout << "\nAvailable Commands:\n";
     cout << "  make <directory>     - Enter file management menu\n";
     cout << "  cd <path>            - Enter process management menu\n";
-    cout << "  rmdir <directory>    - Directory Related Commands\n";
+    cout << "  remove <directory>    - Directory Related Commands\n";
     cout << "  ls                   - List files in the current directory\n";
     cout << "  pwd                  - Print current working directory\n";
     
+    cout << "\n\n";
     cout << "  help                 - Show this help menu\n";
     cout << "  clear                - Clear the screen\n";
     cout << "  back                 - Get back to Main Menu\n";
     cout << "  exit                 - Exit the shell\n";
+}
+
+void directoryMenu() {
+    system("clear");
+    dMenu();
     string line;
     while (true) {
         cout << "Directory> ";
@@ -369,34 +405,42 @@ void directoryMenu() {
         string cmd = tokens[0];
 
         if (cmd == "make" && tokens.size() == 2) {
-            cout << "\nPlease provide a directory name.\n";
+            system("clear");
             makeDirectory(tokens[1]);
-
         } 
-        
-
+        else if (cmd == "cd" && tokens.size() == 2) {
+            system("clear");
+            changeDirectory(tokens[1]);
+        } else if (cmd == "remove" && tokens.size() == 2) {
+            system("clear");
+            removeDirectory(tokens[1]);
+        } else if (cmd == "ls" && tokens.size() == 1) {
+            system("clear");
+            listFiles();
+        } else if (cmd == "pwd" && tokens.size() == 1) {
+            system("clear");
+            printWorkingDirectory();
+        } else if (cmd == "help" && tokens.size() == 1) {
+            system("clear");
+            dMenu();
+        } else if (cmd == "clear" && tokens.size() == 1) {
+            system("clear");
+        }
         else if (cmd == "back") {
+            system("clear");
             cout << "Returning to main menu...\n";
             break;
-        } else {
-            cout << "Invalid process command. Try again.\n";
+        } else if (cmd == "exit") {
+            system("clear");
+            cout << "Exiting ...\n\n";
+            exit(0);
+        }
+
+        else {
+            cout << "Invalid directory command. Try again.\n";
         }
     }
 }
-
-// void directoryMenu() {
-//     cout << "\nAvailable Commands:\n";
-//     cout << "  make <directory>     - Enter file management menu\n";
-//     cout << "  cd <path>            - Enter process management menu\n";
-//     cout << "  rmdir <directory>    - Directory Related Commands\n";
-//     cout << "  ls                   - List files in the current directory\n";
-//     cout << "  pwd                  - Print current working directory\n";
-    
-//     cout << "  help                 - Show this help menu\n";
-//     cout << "  clear                - Clear the screen\n";
-//     cout << "  back                 - Get back to Main Menu\n";
-//     cout << "  exit                 - Exit the shell\n";
-// }
 
 void ensureFilesDir() {
     struct stat st = {0};
