@@ -4,10 +4,11 @@ This project focus on shell like application for linux
 
 ## dependencies 
 
-There are two dependencies
+There are three dependencies
 
 - htop
 - dbus-x11
+- xterm
 
 ## To Run
 
@@ -17,10 +18,10 @@ First install the dependencies
  sudo apt update 
 ```
 
-- htop / dbus-x11
+- htop / dbus-x11 / xterm
 
 ```
-sudo apt install htop dbus-x11
+sudo apt install htop dbus-x11 xterm
 ```
 
 ## Compilation

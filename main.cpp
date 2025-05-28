@@ -37,44 +37,66 @@ vector<string> split(const string& str) {
 
 void createFile(const string& filename) {
     string filepath = CURRENT_DIR + "/" + filename;
-    ofstream ofs(filepath);
-    if (ofs) {
-        cout << "File '" << filename << "' created successfully.\n";
-    } else {
-        cout << "Failed to create file.\n";
+    fs::path pathObj(filepath);
+
+    try {
+        fs::create_directories(pathObj.parent_path());
+
+        ofstream ofs(filepath);
+        if (ofs) {
+            cout << GREEN << "File '" << filename << "' created successfully." << RESET << "\n";
+        } else {
+            cout << RED << "Failed to create file '" << filename << "'." << RESET << "\n";
+        }
+    } catch (const fs::filesystem_error& e) {
+        cerr << RED << "Filesystem Error: " << e.what() << RESET << "\n";
     }
+}
+
+void openFile(const string& filename) {
+    string filepath = CURRENT_DIR + "/" + filename;
+
+    if (!fs::exists(filepath)) {
+        cout << "\033[31mFile '" << filename << "' does not exist.\033[0m\n";
+        return;
+    }
+
+    string command = "nano " + filepath;
+    system(command.c_str());
+
+    cout << "\033[32mReturned from nano editor.\033[0m\n";
 }
 
 void readFile(const string& filename) {
     string filepath = CURRENT_DIR + "/" + filename;
     ifstream ifs(filepath);
     if (!ifs) {
-        cout << "File not found.\n";
+        cout << RED << "File not found." << RESET << "\n";
         return;
     }
-    cout << "---- '" << filename << "' ----\n\n";
+    cout << CYAN << "---- '" << filename << "' ----\n\n" << RESET;
     string line;
     while (getline(ifs, line))
         cout << line << '\n';
-    cout << "\n---- End ----\n";
+    cout << CYAN << "\n---- End ----\n" << RESET;
 }
 
 void deleteFile(const string& filename) {
     string filepath = CURRENT_DIR + "/" + filename;
     if (remove(filepath.c_str()) == 0) {
-        cout << "File '" << filename << "' deleted successfully.\n";
+        cout << GREEN << "File '" << filename << "' deleted successfully." << RESET << "\n";
     } else {
-        cout << "Failed to delete file.\n";
+        cout << RED << "Failed to delete file." << RESET << "\n";
     }
 }
 
 void listFiles() {
     DIR* dir = opendir(CURRENT_DIR.c_str());
     if (!dir) {
-        cout << "Directory '" << CURRENT_DIR << "' does not exist or cannot be opened.\n";
+        cout << RED << "Directory '" << CURRENT_DIR << "' does not exist or cannot be opened." << RESET << "\n";
         return;
     }
-    cout << "Files in '" << CURRENT_DIR << "/" <<"':\n";
+    cout << CYAN << "Files in '" << CURRENT_DIR << "/" <<"':" << RESET << "\n";
     struct dirent* entry;
     while ((entry = readdir(dir)) != nullptr) {
         string name = entry->d_name;
@@ -95,13 +117,13 @@ void forkProcess(const string& programPath) {
         string fullPath = CURRENT_DIR + "/" + programPath;
 
         const char* cmd[] = {
-            "gnome-terminal",
-            "--",
+            "xterm",
+            "-e",
             fullPath.c_str(),
             nullptr
         };
 
-        execvp("gnome-terminal", (char* const*)cmd);
+        execvp("xterm", (char* const*)cmd);  // Use "xterm" here
         perror("execvp failed");
         exit(1);
     } else {
@@ -111,23 +133,23 @@ void forkProcess(const string& programPath) {
 
 
 void showPid() {
-    cout << "Current PID: " << getpid() << "\n";
+    cout << YELLOW << "Current PID: " << RESET << getpid() << "\n";
 }
 
 void showPpid() {
-    cout << "Parent PID: " << getppid() << "\n";
+    cout << YELLOW << "Parent PID: " << RESET << getppid() << "\n";
 }
 
 void waitForChild() {
-    cout << "Waiting for child process to finish...\n";
+    cout << CYAN << "Waiting for child process to finish..." << RESET << "\n";
     pid_t pid = fork();
     if (pid < 0) {
         perror("fork failed");
         return;
     } else if (pid == 0) {
-        cout << "[Child] PID: " << getpid() << " started, sleeping 2 seconds...\n";
-        sleep(2);
-        cout << "[Child] PID: " << getpid() << " exiting.\n";
+        cout << GREEN << "[Child] PID: " << getpid() << " started, sleeping 2 seconds..." << RESET << "\n";
+        sleep(3);
+        cout << GREEN << "[Child] PID: " << getpid() << " exiting." << RESET << "\n";
         exit(42);
     } else {
         int status;
@@ -137,9 +159,9 @@ void waitForChild() {
             return;
         }
         if (WIFEXITED(status)) {
-            cout << "[Parent] Child " << wpid << " exited with status " << WEXITSTATUS(status) << ".\n";
+            cout << YELLOW << "[Parent] Child " << wpid << " exited with status " << WEXITSTATUS(status) << "." << RESET << "\n";
         } else {
-            cout << "[Parent] Child ended abnormally.\n";
+            cout << RED << "[Parent] Child ended abnormally." << RESET << "\n";
         }
     }
 }
@@ -169,70 +191,8 @@ void listDirContents() {
     closedir(dir);
 }
 
-struct Process {
-    int pid;
-    int burstTime;
-    int waitingTime;
-    int turnaroundTime;
-};
-
-void saveGanttChart(const vector<Process>& processes) {
-    string filename = CURRENT_DIR + "/fcfs_gantt.txt";
-    ofstream ofs(filename);
-    if (ofs) {
-        ofs << "Gantt Chart:\n";
-        ofs << "0";
-        for (const auto& p : processes) {
-            ofs << " -- P" << p.pid << " -- " << p.turnaroundTime;
-        }
-        ofs << "\n";
-        cout << "\nGantt chart saved to '" << filename << "'\n";
-    } else {
-        cout << "Failed to save Gantt chart file.\n";
-    }
-}
-
-void fcfsSimulation() {
-    int n;
-    cout << "Enter number of processes: ";
-    cin >> n;
-    vector<Process> processes(n);
-    for (int i = 0; i < n; i++) {
-        processes[i].pid = i + 1;
-        cout << "Enter burst time for process " << processes[i].pid << ": ";
-        cin >> processes[i].burstTime;
-    }
-
-    processes[0].waitingTime = 0;
-    processes[0].turnaroundTime = processes[0].burstTime;
-
-    for (int i = 1; i < n; i++) {
-        processes[i].waitingTime = processes[i-1].waitingTime + processes[i-1].burstTime;
-        processes[i].turnaroundTime = processes[i].waitingTime + processes[i].burstTime;
-    }
-
-    cout << "\nPID\tBurst Time\tWaiting Time\tTurnaround Time\n";
-    for (const auto& p : processes) {
-        cout << p.pid << "\t" << p.burstTime << "\t\t" << p.waitingTime << "\t\t" << p.turnaroundTime << "\n";
-    }
-    
-    cout << endl;
-    cout << endl;
-
-    cout << "Do you want to save the Gantt chart? (y/n): ";
-    char saveGantt;
-    cin >> saveGantt;
-    if (saveGantt == 'y' || saveGantt == 'Y') {
-        saveGanttChart(processes);
-    } else {
-        cout << "Gantt chart not saved.\n";
-    }
-
-    
-}
-
 void helpMenu() {
-    cout << "\nAvailable Commands:\n";
+    cout << CYAN << "\nAvailable Commands:\n" << RESET;
     cout << "  file          - Enter file management menu\n";
     cout << "  process       - Enter process management menu\n";
     cout << "  dir           - Directory Related Commands\n";
@@ -244,7 +204,7 @@ void helpMenu() {
 void makeDirectory(const string& dirname) {
     string path = CURRENT_DIR + "/" + dirname;
     if (mkdir(path.c_str(), 0700) == 0) {
-        cout << "Directory '" << dirname << "' created successfully.\n";
+        cout << GREEN << "Directory '" << dirname << "' created successfully." << RESET << "\n";
     } else {
         perror("mkdir failed");
     }
@@ -256,7 +216,7 @@ void changeDirectory(const string& path) {
         char buffer[1024];
         getcwd(buffer, sizeof(buffer));
         CURRENT_DIR = buffer;
-        cout << "Current directory changed to: " << CURRENT_DIR << '\n';
+        cout << GREEN << "Current directory changed to: " << CURRENT_DIR << RESET << '\n';
     } else {
         perror("cd failed");
     }
@@ -267,33 +227,35 @@ void removeDirectory(const string& dirname) {
 
     try {
         if (!fs::exists(path)) {
-            cout << "Directory '" << dirname << "' does not exist.\n";
+            cout << YELLOW << "Directory '" << dirname << "' does not exist.\n" << RESET;
             return;
         }
 
         if (!fs::is_directory(path)) {
-            cout << "'" << dirname << "' is not a directory.\n";
+            cout << RED << "'" << dirname << "' is not a directory.\n" << RESET;
             return;
         }
 
         if (fs::is_empty(path)) {
             fs::remove(path);
-            cout << "Directory '" << dirname << "' removed successfully.\n";
+            cout << GREEN << "Directory '" << dirname << "' removed successfully.\n" << RESET;
         } else {
-            cout << "Directory '" << dirname << "' is not empty. Do you want to delete it and all its contents? (y/n): ";
+            cout << CYAN << "Directory '" << dirname << "' is not empty.\n";
+            cout << "Do you want to delete it and all its contents? (y/n): " << RESET;
+
             char choice;
             cin >> choice;
             cin.ignore();
 
             if (tolower(choice) == 'y') {
                 fs::remove_all(path);
-                cout << "Directory '" << dirname << "' and all its contents removed successfully.\n";
+                cout << GREEN << "Directory '" << dirname << "' and all its contents removed successfully.\n" << RESET;
             } else {
-                cout << "Operation cancelled. Directory not removed.\n";
+                cout << YELLOW << "Operation cancelled. Directory not removed.\n" << RESET;
             }
         }
     } catch (const fs::filesystem_error& e) {
-        cerr << "Error: " << e.what() << "\n";
+        cerr << RED << "Error: " << e.what() << "\n" << RESET;
     }
 }
 
@@ -304,10 +266,11 @@ void printWorkingDirectory() {
 }
 
 void fMenu() {
-    cout << "\n--- File Management Menu ---\n";
+    cout << CYAN << "\n--- File Management Menu ---\n" << RESET;
 
     cout << "\nAvailable Commands:\n";
     cout << "  create <filename>    - Create File\n";
+    cout << "  open <filename>      - Open File in default editor\n";
     cout << "  read <filename>      - Read File\n";
     cout << "  delete <filename>    - Delete File\n";
     cout << "  list                 - List files in the current directory\n";
@@ -339,7 +302,10 @@ void fileMenu() {
             createFile(tokens[1]);
         } else if (cmd == "read" && tokens.size() == 2) {
             readFile(tokens[1]);
-        } else if (cmd == "delete" && tokens.size() == 2) {
+        } else if (cmd == "open" && tokens.size() == 2) {
+            openFile(tokens[1]);
+        }
+        else if (cmd == "delete" && tokens.size() == 2) {
             deleteFile(tokens[1]);
         } else if (cmd == "list" && tokens.size() == 1) {
             system("clear");
@@ -373,7 +339,7 @@ void fileMenu() {
 }
 
 void dMenu() {
-    cout << "\n--- Directory Management Menu ---\n";
+    cout << CYAN << "\n--- Directory Management Menu ---\n" << RESET;
     cout << "\nAvailable Commands:\n";
     cout << "  make <directory>     - make directory\n";
     cout << "  cd <path>            - change directory\n";
@@ -389,7 +355,7 @@ void dMenu() {
 }
 
 void pMenu() {
-    cout << "\n--- Process Management Menu ---\n";
+    cout << CYAN << "\n--- Process Management Menu ---\n" << RESET;
 
     cout << "\nAvailable Commands:\n";
     cout << "  fork <process>            - Create a new child process using fork()\n";
