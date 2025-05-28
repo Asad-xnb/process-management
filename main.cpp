@@ -81,18 +81,31 @@ void listFiles() {
     closedir(dir);
 }
 
-void forkProcess() {
+void forkProcess(const string& programPath) {
     pid_t pid = fork();
     if (pid < 0) {
         perror("fork failed");
-    } else if (pid == 0) {
-        cout << "[Child] PID: " << getpid() << ", PPID: " << getppid() << "\n";
-        cout << "[Child] Exiting...\n";
-        exit(0);
+        return;
+    }
+
+    if (pid == 0) {
+        string fullPath = CURRENT_DIR + "/" + programPath;
+
+        const char* cmd[] = {
+            "gnome-terminal",
+            "--",
+            fullPath.c_str(),
+            nullptr
+        };
+
+        execvp("gnome-terminal", (char* const*)cmd);
+        perror("execvp failed");
+        exit(1);
     } else {
-        cout << "[Parent] Created child process with PID: " << pid << "\n";
+        cout << "[Parent] Launched new terminal with child PID: " << pid << "\n";
     }
 }
+
 
 void showPid() {
     cout << "Current PID: " << getpid() << "\n";
@@ -129,41 +142,13 @@ void waitForChild() {
 }
 
 void listProcesses() {
-    cout << "Listing processes from /proc (limited)...\n";
-    DIR* dir = opendir("/proc");
-    if (!dir) {
-        perror("opendir /proc failed");
-        return;
-    }
-    struct dirent* entry;
-    vector<int> pids;
-    while ((entry = readdir(dir)) != nullptr) {
-        if (entry->d_type == DT_DIR) {
-            string name = entry->d_name;
-            if (all_of(name.begin(), name.end(), ::isdigit)) {
-                pids.push_back(stoi(name));
-            }
-        }
-    }
-    closedir(dir);
-    cout << "PID\tCMD\n";
-    for (int pid : pids) {
-        string cmdPath = "/proc/" + to_string(pid) + "/comm";
-        ifstream ifs(cmdPath);
-        string cmd;
-        if (ifs.is_open()) {
-            getline(ifs, cmd);
-            cout << pid << "\t" << cmd << '\n';
-        }
-    }
-}
+    cout << "Launching htop...\n";
+    int ret = system("htop");
 
-void killProcess(const string& pidStr) {
-    pid_t pid = stoi(pidStr);
-    if (kill(pid, SIGTERM) == 0) {
-        cout << "Sent SIGTERM to process " << pid << ".\n";
+    if (ret == -1) {
+        perror("Failed to launch htop");
     } else {
-        perror("Failed to kill process");
+        cout << "\nReturned from htop.\n";
     }
 }
 
@@ -241,40 +226,6 @@ void fcfsSimulation() {
     }
 
     
-}
-
-void processMenu() {
-    cout << "\n--- Process Management Menu ---\n";
-    cout << "Commands: fork\n pid\n ppid\n wait\n ps\n kill <pid>\n dir\n back\n";
-    string line;
-    while (true) {
-        cout << "process> ";
-        getline(cin, line);
-        auto tokens = split(line);
-        if (tokens.empty()) continue;
-        string cmd = tokens[0];
-
-        if (cmd == "fork" && tokens.size() == 1) {
-            forkProcess();
-        } else if (cmd == "pid" && tokens.size() == 1) {
-            showPid();
-        } else if (cmd == "ppid" && tokens.size() == 1) {
-            showPpid();
-        } else if (cmd == "wait" && tokens.size() == 1) {
-            waitForChild();
-        } else if (cmd == "ps" && tokens.size() == 1) {
-            listProcesses();
-        } else if (cmd == "kill" && tokens.size() == 2) {
-            killProcess(tokens[1]);
-        } else if (cmd == "dir" && tokens.size() == 1) {
-            listDirContents();
-        } else if (cmd == "back") {
-            cout << "Returning to main menu...\n";
-            break;
-        } else {
-            cout << "Invalid process command. Try again.\n";
-        }
-    }
 }
 
 void helpMenu() {
@@ -418,7 +369,6 @@ void fileMenu() {
     }
 }
 
-
 void dMenu() {
     cout << "\n--- Directory Management Menu ---\n";
     cout << "\nAvailable Commands:\n";
@@ -434,6 +384,66 @@ void dMenu() {
     cout << "  back                 - Get back to Main Menu\n";
     cout << "  exit                 - Exit the shell\n";
 }
+
+void pMenu() {
+    cout << "\n--- Process Management Menu ---\n";
+
+    cout << "\nAvailable Commands:\n";
+    cout << "  fork <process>            - Create a new child process using fork()\n";
+    cout << "  pid              - Display the current process ID (PID)\n";
+    cout << "  ppid             - Display the parent process ID (PPID)\n";
+    cout << "  wait             - Wait for a child process to terminate\n";
+    cout << "  ps               - Display currently running processes (like 'ps')\n";
+
+    cout << endl;
+    cout << "\n\n";
+    cout << "  help             - Show this help menu\n";
+    cout << "  clear            - Clear the screen\n";
+    cout << "  back             - Get back to Main Menu\n";
+    cout << "  exit             - Exit the shell\n";
+}
+
+void processMenu() {
+    system("clear");
+    pMenu();
+    
+    string line;
+    while (true) {
+        cout << "process> ";
+        getline(cin, line);
+        auto tokens = split(line);
+        if (tokens.empty()) continue;
+        string cmd = tokens[0];
+
+        if (cmd == "fork" && tokens.size() == 2) {
+            system("clear");
+            forkProcess(tokens[1]);
+        } else if (cmd == "pid" && tokens.size() == 1) {
+            system("clear");
+            showPid();
+        } else if (cmd == "ppid" && tokens.size() == 1) {
+            system("clear");
+            showPpid();
+        } else if (cmd == "wait" && tokens.size() == 1) {
+            system("clear");
+            waitForChild();
+        } else if (cmd == "ps" && tokens.size() == 1) {
+            system("clear");
+            listProcesses();
+        } else if (cmd == "clear" && tokens.size() == 1) {
+            system("clear");
+        } else if (cmd == "help" && tokens.size() == 1) {
+            system("clear");
+            pMenu();
+        } else if (cmd == "back") {
+            cout << "Returning to main menu...\n";
+            break;
+        } else {
+            cout << "Invalid process command. Try again.\n";
+        }
+    }
+}
+
 
 void directoryMenu() {
     system("clear");
@@ -493,7 +503,7 @@ void ensureFilesDir() {
 
 int main() {
     ensureFilesDir();
-
+    system("clear");
     cout << "Welcome to Ubuntu Shell-like Process Manager!\n";
     cout << "Type 'help' to see available commands.\n";
 
